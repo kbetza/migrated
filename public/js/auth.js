@@ -2,7 +2,6 @@
  * ============================================
  * AUTH.JS - Módulo de Autenticación
  * ============================================
- * Maneja login, logout y verificación de sesión
  */
 
 // URLs de las APIs (Netlify Functions)
@@ -22,17 +21,10 @@ const AppState = {
   isSubmitting: false
 };
 
-/**
- * Obtiene el usuario actual del localStorage
- */
 function getCurrentUser() {
   return localStorage.getItem('usuario');
 }
 
-/**
- * Verifica si el usuario está autenticado
- * Redirige a login si no lo está
- */
 function checkAuth() {
   const usuario = getCurrentUser();
   if (!usuario) {
@@ -42,29 +34,19 @@ function checkAuth() {
   return true;
 }
 
-/**
- * Actualiza el nombre de usuario en el header
- */
 function updateUserDisplay() {
   const nombreUsuarioEl = document.getElementById('nombre-usuario');
   const usuario = getCurrentUser();
-  
   if (nombreUsuarioEl && usuario) {
     nombreUsuarioEl.textContent = usuario;
   }
 }
 
-/**
- * Maneja el cierre de sesión
- */
 function handleLogout() {
   localStorage.removeItem('usuario');
   window.location.href = 'index.html';
 }
 
-/**
- * Maneja el login del usuario
- */
 async function handleLogin(event) {
   event.preventDefault();
   
@@ -76,10 +58,8 @@ async function handleLogin(event) {
   const usuario = usuarioInput.value.trim();
   const contrasena = contrasenaInput.value.trim();
   
-  // Limpiar errores previos
   errorMessage.textContent = '';
   
-  // Deshabilitar botón durante la petición
   if (loginBtn) {
     loginBtn.disabled = true;
     loginBtn.textContent = 'Entrando...';
@@ -88,9 +68,7 @@ async function handleLogin(event) {
   try {
     const response = await fetch(API_URLS.login, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usuario, contrasena })
     });
     
@@ -113,31 +91,23 @@ async function handleLogin(event) {
   }
 }
 
-/**
- * Inicialización cuando el DOM está listo
- */
 document.addEventListener('DOMContentLoaded', () => {
-  // Configurar formulario de login
   const loginForm = document.getElementById('login-form');
   if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
     return;
   }
   
-  // Para el resto de páginas, verificar autenticación
   if (!checkAuth()) return;
   
-  // Actualizar nombre de usuario en header
   updateUserDisplay();
   
-  // Configurar botón de cerrar sesión
   const cerrarSesionBtn = document.getElementById('cerrar-sesion');
   if (cerrarSesionBtn) {
     cerrarSesionBtn.addEventListener('click', handleLogout);
   }
 });
 
-// Exportar para uso en otros módulos
 window.API_URLS = API_URLS;
 window.AppState = AppState;
 window.getCurrentUser = getCurrentUser;

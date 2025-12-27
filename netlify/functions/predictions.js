@@ -1,7 +1,13 @@
 /**
  * Netlify Function: Predictions
- * Versión simplificada sin Netlify Blobs
+ * Guarda apuestas en GitHub
  */
+
+import { 
+  hasPlayerBet, 
+  registerBet, 
+  addPrediction 
+} from '../../lib/github-storage.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -45,10 +51,41 @@ export async function handler(event) {
       };
     }
 
-    // Por ahora, simplemente aceptamos la apuesta sin guardar
-    // TODO: Implementar almacenamiento cuando Blobs esté configurado
-    console.log(`[predictions] Received bet from ${jugador} for matchday ${jornada}`);
-    console.log(`[predictions] Bets:`, JSON.stringify(bets, null, 2));
+    // Verificar si ya apostó
+    const alreadyBet = await hasPlayerBet(jugador, jornada);
+    
+    if (alreadyBet) {
+      return {
+        statusCode: 409,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Ya has enviado tu apuesta para esta jornada.',
+          alreadySubmitted: true 
+        })
+      };
+    }
+
+    // Formatear predicción
+    const prediction = {
+      username: jugador,
+      matchday: parseInt(jornada, 10),
+      timestamp: new Date().toISOString(),
+      bets: bets.map(bet => ({
+        matchId: parseInt(bet.idpartido, 10),
+        homeTeam: bet.equipo_Local,
+        awayTeam: bet.equipo_Visitante,
+        prediction: bet.pronostico,
+        odds: parseFloat(String(bet.cuota).replace(',', '.'))
+      }))
+    };
+
+    // Guardar en GitHub
+    await addPrediction(prediction);
+    
+    // Registrar para evitar duplicados
+    await registerBet(jugador, jornada);
+
+    console.log(`[predictions] Saved bet from ${jugador} for matchday ${jornada}`);
 
     return {
       statusCode: 200,

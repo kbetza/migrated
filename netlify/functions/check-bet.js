@@ -3,22 +3,15 @@
  * Verifica si un jugador ya apostó en una jornada
  */
 
-import { hasPlayerBet } from '../../lib/blob-storage.js';
+import { hasPlayerBet } from '../../lib/github-storage.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Content-Type': 'application/json'
 };
 
-export async function handler(event, context) {
-  // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers, body: '' };
-  }
-
-  // Solo GET
+export async function handler(event) {
   if (event.httpMethod !== 'GET') {
     return {
       statusCode: 405,
@@ -36,24 +29,24 @@ export async function handler(event, context) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ status: 'error', message: 'Parámetros inválidos' })
+        body: JSON.stringify({ error: 'Missing parameters' })
       };
     }
 
-    const existe = await hasPlayerBet(jugador, jornada);
+    const hasBet = await hasPlayerBet(jugador, jornada);
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ status: 'ok', existe })
+      body: JSON.stringify({ hasBet })
     };
 
   } catch (error) {
     console.error('[check-bet] Error:', error);
     return {
-      statusCode: 500,
+      statusCode: 200,
       headers,
-      body: JSON.stringify({ status: 'error', message: 'Server error' })
+      body: JSON.stringify({ hasBet: false })
     };
   }
 }

@@ -2,8 +2,6 @@
  * ============================================
  * APUESTA-ACTUAL.JS
  * ============================================
- * Carga y muestra la apuesta actual del usuario
- * (la última jornada apostada que está en juego)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,9 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
   loadApuestaActual();
 });
 
-/**
- * Carga la apuesta actual del usuario
- */
 async function loadApuestaActual() {
   const loadingContainer = document.getElementById('loading-container');
   const apuestaActualContainer = document.getElementById('apuesta-actual');
@@ -34,111 +29,101 @@ async function loadApuestaActual() {
   }
   
   try {
-    const url = `${API_URLS.historial}?jugador=${encodeURIComponent(jugador)}`;
+    const url = `${API_URLS.apuestaActual}?jugador=${encodeURIComponent(jugador)}`;
     const response = await fetch(url);
     const data = await response.json();
     
-    if (!Array.isArray(data) || data.length === 0) {
-      // No hay apuestas
+    if (!data || !data.bets || data.bets.length === 0) {
       loadingContainer.classList.add('hidden');
-      sinApuestaContainer.classList.remove('hidden');
+      if (sinApuestaContainer) {
+        sinApuestaContainer.classList.remove('hidden');
+      } else {
+        loadingContainer.innerHTML = `
+          <div style="text-align: center; padding: 2rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+            <p style="font-size: 1.2rem; margin-bottom: 1rem;">No tienes apuesta activa</p>
+            <a href="apuestas.html" class="btn">Realizar apuesta</a>
+          </div>
+        `;
+        loadingContainer.classList.remove('hidden');
+      }
       return;
     }
     
-    // Agrupar por jornada
-    const jornadas = {};
-    data.forEach(apuesta => {
-      const j = apuesta.jornada || 'Sin jornada';
-      if (!jornadas[j]) jornadas[j] = [];
-      jornadas[j].push(apuesta);
-    });
+    const apuestas = data.bets;
+    const jornadaActual = data.matchday;
     
-    // Obtener la jornada más reciente (número más alto)
-    const jornadasOrdenadas = Object.keys(jornadas).sort((a, b) => {
-      const numA = parseInt(a) || 0;
-      const numB = parseInt(b) || 0;
-      return numB - numA;
-    });
-    
-    const jornadaActual = jornadasOrdenadas[0];
-    const apuestasJornada = jornadas[jornadaActual];
-    
-    if (!apuestasJornada || apuestasJornada.length === 0) {
-      loadingContainer.classList.add('hidden');
-      sinApuestaContainer.classList.remove('hidden');
-      return;
+    if (numJornada) {
+      numJornada.textContent = `JORNADA ${jornadaActual}`;
     }
     
-    // Mostrar número de jornada
-    numJornada.textContent = `JORNADA ${jornadaActual}`;
+    let aciertos = 0, fallos = 0, pendientes = 0, sumaCuotas = 0, puntosObtenidos = 0;
     
-    // Calcular resumen
-    const datosResumen = apuestasJornada[0];
-    const aciertos = datosResumen.acierto_puntos || 0;
-    const sumaCuotas = datosResumen.cuota_puntos ? parseFloat(datosResumen.cuota_puntos).toFixed(2).replace('.', ',') : '0,00';
-    const puntosObtenidos = datosResumen.resultado_puntos ? parseFloat(datosResumen.resultado_puntos).toFixed(2).replace('.', ',') : '0,00';
+    apuestas.forEach(apuesta => {
+      sumaCuotas += parseFloat(apuesta.odds) || 0;
+      if (apuesta.correct === true) {
+        aciertos++;
+        puntosObtenidos += parseFloat(apuesta.odds) || 0;
+      } else if (apuesta.correct === false) {
+        fallos++;
+      } else {
+        pendientes++;
+      }
+    });
     
-    // Contar partidos pendientes (sin resultado aún)
-    const partidosPendientes = apuestasJornada.filter(a => !a.resultado || a.resultado === '').length;
-    const partidosJugados = apuestasJornada.length - partidosPendientes;
+    if (resumenApuesta) {
+      resumenApuesta.innerHTML = `
+        <div class="resumen-grid">
+          <div class="resumen-item">
+            <span class="resumen-label">Partidos jugados</span>
+            <span class="resumen-value">${aciertos + fallos} / ${apuestas.length}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="resumen-label">Aciertos</span>
+            <span class="resumen-value">${aciertos}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="resumen-label">Suma cuotas</span>
+            <span class="resumen-value">${sumaCuotas.toFixed(2).replace('.', ',')}</span>
+          </div>
+          <div class="resumen-item">
+            <span class="resumen-label">Puntos</span>
+            <span class="resumen-value highlight">${puntosObtenidos.toFixed(2).replace('.', ',')}</span>
+          </div>
+        </div>
+      `;
+    }
     
-    resumenApuesta.innerHTML = `
-      <div class="resumen-grid">
-        <div class="resumen-item">
-          <span class="resumen-label">Partidos jugados</span>
-          <span class="resumen-value">${partidosJugados} / ${apuestasJornada.length}</span>
-        </div>
-        <div class="resumen-item">
-          <span class="resumen-label">Aciertos</span>
-          <span class="resumen-value">${aciertos}</span>
-        </div>
-        <div class="resumen-item">
-          <span class="resumen-label">Suma cuotas</span>
-          <span class="resumen-value">${sumaCuotas}</span>
-        </div>
-        <div class="resumen-item">
-          <span class="resumen-label">Puntos</span>
-          <span class="resumen-value highlight">${puntosObtenidos}</span>
-        </div>
-      </div>
-    `;
-    
-    // Renderizar tabla de apuestas
-    apuestasJornada.forEach(apuesta => {
+    apuestas.forEach(apuesta => {
       const tr = document.createElement('tr');
+      const tieneResultado = apuesta.actualResult && apuesta.actualResult !== '';
       
-      // Determinar estado del partido
-      const tieneResultado = apuesta.resultado && apuesta.resultado !== '';
-      
-      // Icono de acierto
       let aciertoIcon = '<span class="estado-pendiente">⏳</span>';
       if (tieneResultado) {
-        if (apuesta.acierto === true) {
+        if (apuesta.correct === true) {
           aciertoIcon = '<span class="estado-acierto">✅</span>';
           tr.classList.add('fila-acierto');
-        } else if (apuesta.acierto === false) {
+        } else if (apuesta.correct === false) {
           aciertoIcon = '<span class="estado-fallo">❌</span>';
           tr.classList.add('fila-fallo');
         }
       }
       
-      // Formatear cuota
-      const cuotaFormateada = apuesta.cuota ? 
-        parseFloat(apuesta.cuota).toFixed(2).replace('.', ',') : '-';
+      const cuotaFormateada = parseFloat(apuesta.odds).toFixed(2).replace('.', ',');
+      const resultadoDisplay = tieneResultado ? apuesta.actualResult : '<span class="pendiente">Por jugar</span>';
       
       tr.innerHTML = `
-        <td>${apuesta.equipo_Local || '-'}</td>
-        <td>${apuesta.equipo_Visitante || '-'}</td>
-        <td><span class="pronostico-badge">${apuesta.pronostico || '-'}</span></td>
+        <td>${apuesta.homeTeam || '-'}</td>
+        <td>${apuesta.awayTeam || '-'}</td>
+        <td><span class="pronostico-badge">${apuesta.prediction || '-'}</span></td>
         <td class="cuota-value">${cuotaFormateada}</td>
-        <td class="resultado-value">${apuesta.resultado || '<span class="pendiente">Por jugar</span>'}</td>
+        <td class="resultado-value">${resultadoDisplay}</td>
         <td>${aciertoIcon}</td>
       `;
       
       tablaBody.appendChild(tr);
     });
     
-    // Mostrar contenedor
     loadingContainer.classList.add('hidden');
     apuestaActualContainer.classList.remove('hidden');
     

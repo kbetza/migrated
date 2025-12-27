@@ -99,3 +99,8 @@
   from = "/login"
   to = "/index.html"
   status = 200
+
+[[redirects]]
+  from = "/api/current-bet"
+  to = "/.netlify/functions/current-bet"
+  status = 200

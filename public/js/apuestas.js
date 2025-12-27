@@ -2,11 +2,8 @@
  * ============================================
  * APUESTAS.JS
  * ============================================
- * Maneja la carga de partidos y envío de apuestas
- * Incluye protección contra envíos múltiples
  */
 
-// Estado local del módulo
 const BettingState = {
   isSubmitting: false,
   hasSubmitted: false,
@@ -24,15 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSubmitButton();
 });
 
-/**
- * Verifica si el usuario ya apostó en esta jornada
- */
 async function checkIfAlreadyBet(jornada) {
   const usuario = getCurrentUser();
   if (!usuario || !jornada) return false;
   
   try {
-    const response = await fetch(`${API_URLS.verificarApuesta}?jugador=${encodeURIComponent(usuario)}&jornada=${encodeURIComponent(jornada)}`);
+    const url = `${API_URLS.verificarApuesta}?jugador=${encodeURIComponent(usuario)}&jornada=${encodeURIComponent(jornada)}`;
+    const response = await fetch(url);
     const data = await response.json();
     return data.hasBet === true;
   } catch (error) {
@@ -41,9 +36,6 @@ async function checkIfAlreadyBet(jornada) {
   }
 }
 
-/**
- * Carga los partidos de la jornada actual
- */
 async function loadMatches() {
   const tablaApuestas = document.getElementById('tabla-apuestas');
   const loadingContainer = document.getElementById('loading-container');
@@ -61,12 +53,13 @@ async function loadMatches() {
     
     BettingState.matches = data;
     
-    // Guardar jornada actual
     let jornadaNum = '17';
     if (data[0] && data[0].Jornada) {
       jornadaNum = data[0].Jornada.replace('Regular season - ', '');
       BettingState.currentJornada = jornadaNum;
-      numJornada.textContent = `JORNADA ${jornadaNum}`;
+      if (numJornada) {
+        numJornada.textContent = `JORNADA ${jornadaNum}`;
+      }
     }
     
     // VERIFICAR SI YA APOSTÓ
@@ -75,26 +68,33 @@ async function loadMatches() {
       BettingState.hasSubmitted = true;
       loadingContainer.innerHTML = `
         <div style="text-align: center; padding: 2rem;">
-          <p style="color: var(--color-primary); font-size: 1.2rem; margin-bottom: 1rem;">
-            ✓ Ya has enviado tu apuesta para la Jornada ${jornadaNum}
+          <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+          <p style="color: #4CAF50; font-size: 1.2rem; margin-bottom: 1rem;">
+            Ya has enviado tu apuesta para la Jornada ${jornadaNum}
           </p>
-          <a href="lobby.html" class="btn">Volver al menú</a>
+          <p style="color: #888; margin-bottom: 1.5rem;">
+            Puedes ver tu apuesta en "Ver apuesta actual"
+          </p>
+          <a href="lobby.html" class="btn" style="display: inline-block; padding: 0.75rem 2rem; background: #4CAF50; color: white; text-decoration: none; border-radius: 8px;">
+            Volver al menú
+          </a>
         </div>
       `;
+      if (enviarBtn) enviarBtn.style.display = 'none';
       return;
     }
     
-    // Renderizar partidos
     data.forEach((partido, index) => {
       const tr = createMatchRow(partido, index);
       tablaBody.appendChild(tr);
     });
     
-    // Mostrar tabla y botón
     loadingContainer.classList.add('hidden');
     tablaApuestas.classList.remove('hidden');
-    enviarBtn.classList.remove('hidden');
-    enviarBtn.disabled = false;
+    if (enviarBtn) {
+      enviarBtn.classList.remove('hidden');
+      enviarBtn.disabled = false;
+    }
     
   } catch (error) {
     console.error('Error cargando partidos:', error);
@@ -105,18 +105,13 @@ async function loadMatches() {
   }
 }
 
-/**
- * Crea una fila de partido con las opciones de apuesta
- */
 function createMatchRow(partido, index) {
   const tr = document.createElement('tr');
   
-  // Fecha
   const tdFecha = document.createElement('td');
   tdFecha.textContent = new Date(partido.Fecha).toLocaleDateString('es-ES');
   tr.appendChild(tdFecha);
   
-  // Hora
   const tdHora = document.createElement('td');
   tdHora.textContent = new Date(partido.Hora).toLocaleTimeString('es-ES', {
     hour: '2-digit',
@@ -124,49 +119,37 @@ function createMatchRow(partido, index) {
   });
   tr.appendChild(tdHora);
   
-  // Equipo Local
   const tdLocal = document.createElement('td');
   tdLocal.className = 'team-cell';
-  
   const imgLocal = document.createElement('img');
   imgLocal.src = `logos/${partido.ID_Local}.png`;
   imgLocal.alt = partido.Equipo_Local;
-  imgLocal.title = partido.Equipo_Local;
   imgLocal.onerror = function() { this.style.display = 'none'; };
-  
   const spanLocal = document.createElement('span');
   spanLocal.className = 'team-name';
   spanLocal.textContent = partido.Equipo_Local;
-  
   tdLocal.appendChild(imgLocal);
   tdLocal.appendChild(spanLocal);
   tr.appendChild(tdLocal);
   
-  // Equipo Visitante
   const tdVisitante = document.createElement('td');
   tdVisitante.className = 'team-cell';
-  
   const imgVisitante = document.createElement('img');
   imgVisitante.src = `logos/${partido.ID_Visitante}.png`;
   imgVisitante.alt = partido.Equipo_Visitante;
-  imgVisitante.title = partido.Equipo_Visitante;
   imgVisitante.onerror = function() { this.style.display = 'none'; };
-  
   const spanVisitante = document.createElement('span');
   spanVisitante.className = 'team-name';
   spanVisitante.textContent = partido.Equipo_Visitante;
-  
   tdVisitante.appendChild(imgVisitante);
   tdVisitante.appendChild(spanVisitante);
   tr.appendChild(tdVisitante);
   
-  // Selector de apuesta (1, X, 2)
   const tdApuesta = document.createElement('td');
   const betSelector = createBetSelector(partido, index);
   tdApuesta.appendChild(betSelector);
   tr.appendChild(tdApuesta);
   
-  // Campos ocultos para datos
   tr.dataset.idLocal = partido.ID_Local;
   tr.dataset.idVisitante = partido.ID_Visitante;
   tr.dataset.idPartido = partido.ID_partido;
@@ -177,9 +160,6 @@ function createMatchRow(partido, index) {
   return tr;
 }
 
-/**
- * Crea el selector de apuesta 1-X-2
- */
 function createBetSelector(partido, index) {
   const container = document.createElement('div');
   container.className = 'bet-selector';
@@ -200,13 +180,8 @@ function createBetSelector(partido, index) {
     radio.value = option.value;
     radio.dataset.cuota = option.cuota;
     
-    // Evento para actualizar clase visual
     radio.addEventListener('change', () => {
-      // Quitar clase active de hermanos
-      container.querySelectorAll('.bet-option').forEach(opt => {
-        opt.classList.remove('active');
-      });
-      // Añadir a este
+      container.querySelectorAll('.bet-option').forEach(opt => opt.classList.remove('active'));
       label.classList.add('active');
     });
     
@@ -216,9 +191,7 @@ function createBetSelector(partido, index) {
     
     const cuotaSpan = document.createElement('span');
     cuotaSpan.className = 'bet-quota';
-    // Formatear cuota con coma decimal
-    const cuotaFormateada = parseFloat(option.cuota).toFixed(2).replace('.', ',');
-    cuotaSpan.textContent = cuotaFormateada;
+    cuotaSpan.textContent = parseFloat(option.cuota).toFixed(2).replace('.', ',');
     
     label.appendChild(radio);
     label.appendChild(valueSpan);
@@ -229,27 +202,17 @@ function createBetSelector(partido, index) {
   return container;
 }
 
-/**
- * Configura el botón de envío con protección contra envíos múltiples
- */
 function setupSubmitButton() {
   const enviarBtn = document.getElementById('enviar-apuestas');
-  
   if (!enviarBtn) return;
-  
   enviarBtn.addEventListener('click', handleSubmit);
 }
 
-/**
- * Maneja el envío de apuestas
- */
 async function handleSubmit() {
   const enviarBtn = document.getElementById('enviar-apuestas');
-  const statusMessage = document.getElementById('status-message');
   
-  // Verificar si ya se está enviando o ya se envió
   if (BettingState.isSubmitting) {
-    showStatus('Por favor espera, se están enviando las apuestas...', 'warning');
+    showStatus('Por favor espera...', 'warning');
     return;
   }
   
@@ -258,19 +221,13 @@ async function handleSubmit() {
     return;
   }
   
-  // Recoger datos de las apuestas
   const filas = document.querySelectorAll('#bodyRows tr');
   const datosEnviar = [];
-  const ahora = new Date();
-  const fechaDia = ahora.toLocaleDateString();
-  const fechaHora = ahora.toLocaleTimeString();
   const nombreUsuario = getCurrentUser();
-  
   let apuestasIncompletas = false;
   
   filas.forEach((fila) => {
     const radioSeleccionado = fila.querySelector('input[type="radio"]:checked');
-    
     if (!radioSeleccionado) {
       apuestasIncompletas = true;
     } else {
@@ -281,44 +238,32 @@ async function handleSubmit() {
         equipo_Local: fila.dataset.equipoLocal,
         equipo_Visitante: fila.dataset.equipoVisitante,
         pronostico: radioSeleccionado.value,
-        acierto: "",
-        dia: fechaDia,
-        hora: fechaHora,
         cuota: radioSeleccionado.dataset.cuota
       });
     }
   });
   
-  // Validar que todas las apuestas están completas
   if (apuestasIncompletas) {
     showStatus('Debes seleccionar un resultado en todos los partidos.', 'error');
     return;
   }
   
-  // Bloquear botón y marcar como enviando
   BettingState.isSubmitting = true;
   enviarBtn.disabled = true;
   enviarBtn.textContent = 'Enviando...';
-  enviarBtn.classList.add('sending');
   
   try {
     const response = await fetch(API_URLS.enviarApuestas, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datosEnviar)
     });
     
     const result = await response.json();
     
-    // Verificar si ya había enviado
     if (result.alreadySubmitted) {
-      BettingState.isSubmitting = false;
       BettingState.hasSubmitted = true;
-      enviarBtn.disabled = true;
       enviarBtn.textContent = 'Apuesta ya enviada';
-      enviarBtn.classList.remove('sending');
       showStatus('Ya has enviado tu apuesta para esta jornada.', 'warning');
       return;
     }
@@ -327,48 +272,29 @@ async function handleSubmit() {
       throw new Error(result.error || 'Error desconocido');
     }
     
-    // Marcar como enviado exitosamente
     BettingState.hasSubmitted = true;
     BettingState.isSubmitting = false;
-    
     enviarBtn.textContent = '✓ Apuestas Enviadas';
-    enviarBtn.classList.remove('sending');
-    enviarBtn.classList.add('sent');
-    
     showStatus('¡Apuestas enviadas correctamente!', 'success');
     
-    // Redirigir después de 2 segundos
-    setTimeout(() => {
-      window.location.href = 'lobby.html';
-    }, 2000);
+    setTimeout(() => { window.location.href = 'lobby.html'; }, 2000);
     
   } catch (error) {
     console.error('Error al enviar:', error);
-    
     BettingState.isSubmitting = false;
     enviarBtn.disabled = false;
     enviarBtn.textContent = 'Enviar Apuestas';
-    enviarBtn.classList.remove('sending');
-    
     showStatus('Error al enviar las apuestas. Inténtalo de nuevo.', 'error');
   }
 }
 
-/**
- * Muestra un mensaje de estado
- */
 function showStatus(message, type) {
   const statusMessage = document.getElementById('status-message');
   if (!statusMessage) return;
-  
   statusMessage.textContent = message;
   statusMessage.className = `status-message ${type}`;
   statusMessage.classList.remove('hidden');
-  
-  // Auto-ocultar mensajes de éxito y warning después de 5 segundos
   if (type !== 'error') {
-    setTimeout(() => {
-      statusMessage.classList.add('hidden');
-    }, 5000);
+    setTimeout(() => statusMessage.classList.add('hidden'), 5000);
   }
 }

@@ -5,15 +5,16 @@
  * Maneja login, logout y verificación de sesión
  */
 
-// URLs de las APIs - ACTUALIZADAS para Netlify Functions
+// URLs de las APIs (Netlify Functions)
 const API_URLS = {
   login: '/api/login',
-  clasificacionJugadores: '/api/standings/players',
-  clasificacionLiga: '/api/standings/league',
   partidos: '/api/matches',
   enviarApuestas: '/api/predictions',
+  verificarApuesta: '/api/check-bet',
+  apuestaActual: '/api/current-bet',
   historial: '/api/history',
-  verificarApuesta: '/api/check-bet'
+  clasificacionJugadores: '/api/standings/players',
+  clasificacionLiga: '/api/standings/league'
 };
 
 // Estado de la aplicación
@@ -96,7 +97,7 @@ async function handleLogin(event) {
     const data = await response.json();
     
     if (data.success) {
-      localStorage.setItem('usuario', usuario);
+      localStorage.setItem('usuario', data.usuario || usuario);
       window.location.href = 'lobby.html';
     } else {
       errorMessage.textContent = 'Usuario o contraseña incorrectos.';
@@ -120,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginForm = document.getElementById('login-form');
   if (loginForm) {
     loginForm.addEventListener('submit', handleLogin);
-    return; // En la página de login, no verificamos auth
+    return;
   }
   
   // Para el resto de páginas, verificar autenticación

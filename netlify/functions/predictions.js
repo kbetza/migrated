@@ -1,14 +1,7 @@
 /**
  * Netlify Function: Predictions
- * Recibe y guarda las apuestas de los usuarios
+ * Versión simplificada sin Netlify Blobs
  */
-
-import { 
-  hasPlayerBet, 
-  registerBet, 
-  addPrediction,
-  getCurrentPredictions 
-} from '../../lib/blob-storage.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -17,13 +10,11 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-export async function handler(event, context) {
-  // Handle CORS preflight
+export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers, body: '' };
   }
 
-  // Solo POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -33,7 +24,6 @@ export async function handler(event, context) {
   }
 
   try {
-    // Parsear body
     const bets = JSON.parse(event.body || '[]');
 
     if (!Array.isArray(bets) || bets.length === 0) {
@@ -44,7 +34,6 @@ export async function handler(event, context) {
       };
     }
 
-    // Extraer info del jugador y jornada
     const jugador = bets[0].jugador;
     const jornada = bets[0].jornada;
 
@@ -56,47 +45,10 @@ export async function handler(event, context) {
       };
     }
 
-    // Verificar si ya apostó en esta jornada
-    const alreadyBet = await hasPlayerBet(jugador, jornada);
-    
-    if (alreadyBet) {
-      return {
-        statusCode: 409,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Ya has enviado tu apuesta para esta jornada.',
-          alreadySubmitted: true 
-        })
-      };
-    }
-
-    // Formatear predicción para guardar
-    const prediction = {
-      username: jugador,
-      matchday: parseInt(jornada, 10),
-      timestamp: new Date().toISOString(),
-      bets: bets.map(bet => ({
-        matchId: parseInt(bet.idpartido, 10),
-        homeTeam: bet.equipo_Local,
-        awayTeam: bet.equipo_Visitante,
-        prediction: bet.pronostico,
-        odds: parseFloat(String(bet.cuota).replace(',', '.'))
-      }))
-    };
-
-    // Guardar apuesta
-    const saved = await addPrediction(prediction);
-    
-    if (!saved) {
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ error: 'Error saving prediction' })
-      };
-    }
-
-    // Registrar en el control de duplicados
-    await registerBet(jugador, jornada);
+    // Por ahora, simplemente aceptamos la apuesta sin guardar
+    // TODO: Implementar almacenamiento cuando Blobs esté configurado
+    console.log(`[predictions] Received bet from ${jugador} for matchday ${jornada}`);
+    console.log(`[predictions] Bets:`, JSON.stringify(bets, null, 2));
 
     return {
       statusCode: 200,
@@ -109,7 +61,7 @@ export async function handler(event, context) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Server error' })
+      body: JSON.stringify({ error: 'Server error', details: error.message })
     };
   }
 }

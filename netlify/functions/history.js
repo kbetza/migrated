@@ -1,9 +1,9 @@
 /**
  * Netlify Function: History
- * Obtiene historial de apuestas desde GitHub
+ * Obtiene historial de apuestas desde Supabase
  */
 
-import { getPlayerHistory } from '../../lib/github-storage.js';
+import { getPlayerHistory } from '../../lib/supabase.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -43,7 +43,7 @@ export async function handler(event) {
       if (!grouped[matchday]) {
         grouped[matchday] = {
           jornada: matchday,
-          fecha: entry.timestamp,
+          fecha: entry.created_at,
           resumen: {
             aciertos: 0,
             fallos: 0,
@@ -54,26 +54,24 @@ export async function handler(event) {
         };
       }
       
-      for (const bet of entry.bets) {
-        const partido = {
-          equipo_local: bet.homeTeam,
-          equipo_visitante: bet.awayTeam,
-          pronostico: bet.prediction,
-          cuota: bet.odds,
-          resultado_real: bet.actualResult || null,
-          acierto: bet.correct
-        };
-        
-        grouped[matchday].partidos.push(partido);
-        
-        if (bet.correct === true) {
-          grouped[matchday].resumen.aciertos++;
-          grouped[matchday].resumen.puntos += bet.odds;
-        } else if (bet.correct === false) {
-          grouped[matchday].resumen.fallos++;
-        } else {
-          grouped[matchday].resumen.pendientes++;
-        }
+      const partido = {
+        equipo_local: entry.home_team,
+        equipo_visitante: entry.away_team,
+        pronostico: entry.prediction,
+        cuota: parseFloat(entry.odds),
+        resultado_real: entry.actual_result,
+        acierto: entry.correct
+      };
+      
+      grouped[matchday].partidos.push(partido);
+      
+      if (entry.correct === true) {
+        grouped[matchday].resumen.aciertos++;
+        grouped[matchday].resumen.puntos += parseFloat(entry.points_earned) || 0;
+      } else if (entry.correct === false) {
+        grouped[matchday].resumen.fallos++;
+      } else {
+        grouped[matchday].resumen.pendientes++;
       }
     }
 

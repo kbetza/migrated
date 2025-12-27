@@ -3,7 +3,7 @@
  * Verifica si un jugador ya apostó en una jornada
  */
 
-import { hasPlayerBet } from '../../lib/github-storage.js';
+import { hasPlayerBet } from '../../lib/supabase.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -23,7 +23,7 @@ export async function handler(event) {
   try {
     const params = event.queryStringParameters || {};
     const jugador = params.jugador;
-    const jornada = params.jornada;
+    const jornada = parseInt(params.jornada, 10);
 
     if (!jugador || !jornada) {
       return {

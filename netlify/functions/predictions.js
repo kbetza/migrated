@@ -1,13 +1,9 @@
 /**
  * Netlify Function: Predictions
- * Guarda apuestas en GitHub
+ * Guarda apuestas en Supabase
  */
 
-import { 
-  hasPlayerBet, 
-  registerBet, 
-  addPrediction 
-} from '../../lib/github-storage.js';
+import { hasPlayerBet, registerBet, addPrediction } from '../../lib/supabase.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -41,7 +37,7 @@ export async function handler(event) {
     }
 
     const jugador = bets[0].jugador;
-    const jornada = bets[0].jornada;
+    const jornada = parseInt(bets[0].jornada, 10);
 
     if (!jugador || !jornada) {
       return {
@@ -68,8 +64,7 @@ export async function handler(event) {
     // Formatear predicción
     const prediction = {
       username: jugador,
-      matchday: parseInt(jornada, 10),
-      timestamp: new Date().toISOString(),
+      matchday: jornada,
       bets: bets.map(bet => ({
         matchId: parseInt(bet.idpartido, 10),
         homeTeam: bet.equipo_Local,
@@ -79,7 +74,7 @@ export async function handler(event) {
       }))
     };
 
-    // Guardar en GitHub
+    // Guardar en Supabase
     await addPrediction(prediction);
     
     // Registrar para evitar duplicados

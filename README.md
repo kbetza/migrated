@@ -1,32 +1,34 @@
-# Quiniela La Liga - Migración a Netlify
+# Quiniela La Liga - Versión Supabase
 
-Sistema de quinielas de La Liga migrado de Google Sheets + Apps Script a Netlify + JSON.
+Sistema de quinielas de La Liga usando Supabase como base de datos.
 
-## 🚀 Deploy Rápido
+## 🚀 Cambios respecto a la versión anterior
 
-### 1. Requisitos previos
-- Cuenta de [Netlify](https://netlify.com)
-- Token de API de [football-data.org](https://www.football-data.org/) (gratis)
-- Node.js 18+
+### Antes (v2)
+- Llamadas a la API de football-data.org cada 15 minutos
+- Datos de partidos almacenados en archivos JSON
+- Scheduled function para actualización automática
 
-### 2. Configuración
+### Ahora (v3)
+- **Sin llamadas a APIs externas** - Los datos se leen directamente de Supabase
+- **Base de datos centralizada** - Todos los datos en tablas de Supabase
+- **Sin scheduled functions** - Actualización manual o mediante panel de Supabase
+
+## 📦 Configuración
+
+### 1. Crear proyecto en Supabase
+
+1. Ve a [supabase.com](https://supabase.com) y crea un proyecto
+2. Copia la URL del proyecto y la clave anon
+
+### 2. Crear las tablas
+
+Ejecuta los scripts SQL en orden en el **SQL Editor** de Supabase:
 
 ```bash
-# Clonar el repositorio
-git clone <tu-repo>
-cd quiniela-migrated
-
-# Instalar dependencias
-npm install
-
-# Hashear contraseñas (¡importante para producción!)
-npm run hash-passwords
-
-# (Opcional) Actualizar partidos manualmente
-FOOTBALL_DATA_API_TOKEN=tu_token npm run update-matches
-
-# Validar que todo está correcto
-npm run validate
+supabase/migrations/001_create_matches_table.sql    # Tablas de partidos y clasificación
+supabase/migrations/002_seed_data.sql               # Datos de ejemplo
+supabase/migrations/003_create_predictions_tables.sql # Predicciones e historial
 ```
 
 ### 3. Variables de entorno en Netlify
@@ -35,7 +37,8 @@ Ve a **Site settings > Environment variables** y añade:
 
 | Variable | Descripción |
 |----------|-------------|
-| `FOOTBALL_DATA_API_TOKEN` | Token de la API de football-data.org |
+| `SUPABASE_URL` | URL de tu proyecto Supabase |
+| `SUPABASE_ANON_KEY` | Clave anon (pública) de Supabase |
 
 ### 4. Deploy
 
@@ -43,81 +46,40 @@ Ve a **Site settings > Environment variables** y añade:
 # Con Netlify CLI
 netlify deploy --prod
 
-# O simplemente conecta tu repo de GitHub a Netlify
+# O conecta tu repo de GitHub a Netlify
 ```
 
-## 📁 Estructura del Proyecto
+## 📊 Estructura de la Base de Datos
 
-```
-quiniela-migrated/
-├── netlify.toml              # Configuración de Netlify
-├── package.json              # Dependencias Node
-│
-├── lib/                      # Módulos compartidos
-│   ├── football-data.js      # Cliente API football-data.org
-│   ├── compute-odds.js       # Cálculo de cuotas
-│   ├── compute-standings.js  # Cálculo de clasificaciones
-│   └── blob-storage.js       # Wrapper Netlify Blobs
-│
-├── netlify/functions/        # Serverless functions
-│   ├── login.js              # POST /api/login
-│   ├── matches.js            # GET /api/matches
-│   ├── predictions.js        # POST /api/predictions
-│   ├── standings-league.js   # GET /api/standings/league
-│   ├── standings-players.js  # GET /api/standings/players
-│   ├── history.js            # GET /api/history
-│   ├── check-bet.js          # GET /api/check-bet
-│   └── scheduled-update.js   # Cron: actualiza partidos
-│
-├── scripts/                  # Scripts de utilidad
-│   ├── hash-passwords.js     # Hashear contraseñas
-│   ├── manual-update-matches.js  # Actualizar partidos
-│   └── validate-migration.js # Validar migración
-│
-└── public/                   # Frontend estático
-    ├── index.html            # Login
-    ├── lobby.html            # Menú principal
-    ├── apuestas.html         # Realizar apuestas
-    ├── historial.html        # Ver historial
-    ├── clasificacion_*.html  # Rankings
-    ├── data/                 # Datos JSON
-    │   ├── users.json
-    │   ├── current-matchday.json
-    │   ├── league-standings.json
-    │   └── player-standings.json
-    ├── js/
-    ├── styles/
-    └── logos/
-```
+### Tablas principales
 
-## ⚙️ Cómo Funciona
+| Tabla | Descripción |
+|-------|-------------|
+| `matches` | Todos los partidos de la temporada |
+| `league_standings` | Clasificación de equipos |
+| `predictions` | Apuestas activas (jornada actual) |
+| `bet_registry` | Registro para evitar apuestas duplicadas |
+| `history` | Historial de apuestas con resultados |
+| `player_standings` | Clasificación de jugadores |
 
-### Actualización Automática de Partidos
+### Esquema de `matches`
 
-La función `scheduled-update` se ejecuta cada 15 minutos:
-
-1. Consulta football-data.org (con cache ETag)
-2. Actualiza `all-matches.json` y `league-standings.json`
-3. Recalcula cuotas para la jornada actual
-4. Verifica si la jornada terminó y archiva predicciones
-5. Recalcula clasificación de jugadores
-
-### Sistema de Cuotas
-
-Las cuotas se calculan automáticamente basándose en la clasificación:
-
-```
-Fuerza del equipo = (Puntos × 3) + (Diferencia de goles × 2) + Goles a favor
-```
-
-- Fuerza del empate: 80 (constante)
-- Margen de casa: 1.08
-- Cuota máxima: 20
-
-### Sistema de Puntuación
-
-```
-Puntos por jornada = Aciertos × Suma de cuotas acertadas
+```sql
+id              BIGINT PRIMARY KEY    -- ID del partido
+matchday        INTEGER               -- Número de jornada
+utc_date        TIMESTAMPTZ           -- Fecha/hora UTC
+status          VARCHAR(20)           -- SCHEDULED, FINISHED, etc.
+home_team_id    INTEGER               -- ID equipo local
+home_team_name  VARCHAR(100)          -- Nombre equipo local
+away_team_id    INTEGER               -- ID equipo visitante
+away_team_name  VARCHAR(100)          -- Nombre equipo visitante
+home_score      INTEGER               -- Goles local (NULL si no jugado)
+away_score      INTEGER               -- Goles visitante
+result          CHAR(1)               -- '1', 'X', '2' o NULL
+odds_home       DECIMAL(5,2)          -- Cuota local
+odds_draw       DECIMAL(5,2)          -- Cuota empate
+odds_away       DECIMAL(5,2)          -- Cuota visitante
+season          VARCHAR(10)           -- '2024' para 2024-25
 ```
 
 ## 🔌 Endpoints API
@@ -132,61 +94,99 @@ Puntos por jornada = Aciertos × Suma de cuotas acertadas
 | GET | `/api/standings/players` | Clasificación de jugadores |
 | GET | `/api/history?jugador=X` | Historial de un jugador |
 
-## 🛠️ Desarrollo Local
+## 📝 Actualizar datos manualmente
 
-```bash
-# Instalar Netlify CLI
-npm install -g netlify-cli
+### Desde el panel de Supabase
 
-# Ejecutar en local
-netlify dev
+1. Ve a **Table Editor** en tu proyecto Supabase
+2. Selecciona la tabla `matches`
+3. Edita los campos necesarios (status, scores, result)
 
-# El sitio estará en http://localhost:8888
+### Mediante SQL
+
+```sql
+-- Actualizar resultado de un partido
+UPDATE matches 
+SET 
+    status = 'FINISHED',
+    home_score = 2,
+    away_score = 1,
+    result = '1'
+WHERE id = 544371;
+
+-- Actualizar múltiples partidos
+UPDATE matches 
+SET status = 'FINISHED', home_score = 3, away_score = 0, result = '1'
+WHERE id = 544375;
 ```
 
-## 📋 Migrando Datos Existentes
+### Recalcular clasificación de jugadores
 
-Si tienes datos en Google Sheets:
+```sql
+SELECT update_player_standings();
+```
 
-1. Exporta la clasificación de jugadores a `public/data/player-standings.json`
-2. Exporta los usuarios a `public/data/users.json`
-3. Ejecuta `npm run hash-passwords`
-4. Ejecuta `FOOTBALL_DATA_API_TOKEN=xxx npm run update-matches`
+## 🗂️ Estructura del Proyecto
 
-## ⚠️ Notas Importantes
+```
+quiniela-laliga/
+├── netlify.toml              # Configuración Netlify
+├── package.json              # Dependencias
+│
+├── lib/
+│   └── supabase.js           # Cliente Supabase con todas las funciones
+│
+├── netlify/functions/        # Serverless functions
+│   ├── login.js
+│   ├── matches.js            # Lee de Supabase
+│   ├── predictions.js
+│   ├── standings-league.js   # Lee de Supabase
+│   ├── standings-players.js
+│   ├── history.js
+│   ├── check-bet.js
+│   └── current-bet.js
+│
+├── supabase/migrations/      # Scripts SQL
+│   ├── 001_create_matches_table.sql
+│   ├── 002_seed_data.sql
+│   └── 003_create_predictions_tables.sql
+│
+└── public/                   # Frontend (sin cambios)
+    ├── index.html
+    ├── lobby.html
+    └── ...
+```
+
+## ⚠️ Notas importantes
 
 ### Seguridad
-- Las contraseñas se hashean con bcrypt (10 rounds)
-- El token de la API solo está en variables de entorno del servidor
-- El frontend nunca ve el token
+- Las claves de Supabase están en variables de entorno del servidor
+- RLS (Row Level Security) está habilitado en todas las tablas
+- Las políticas permiten lectura pública pero controlan escritura
 
-### Rate Limits
-- football-data.org (free): 10 requests/minuto
-- Usamos cache ETag para minimizar llamadas
-- La scheduled function tiene backoff exponencial
+### Actualización de datos
+- **Ya no hay actualización automática** desde football-data.org
+- Debes actualizar los partidos manualmente en Supabase
+- Puedes crear un cron job externo si necesitas automatización
 
-### Persistencia
-- **Datos estáticos** (partidos, clasificaciones): JSON en el repo
-- **Datos dinámicos** (apuestas): Netlify Blobs
+### Migración de datos existentes
+Si tienes datos en el sistema anterior:
+1. Exporta el historial y clasificaciones
+2. Insértalos en las tablas de Supabase
+3. Verifica que los IDs de partidos coincidan
 
 ## 🐛 Troubleshooting
 
 ### "Error cargando partidos"
-- Verifica que `public/data/current-matchday.json` existe
-- Ejecuta `npm run update-matches`
+- Verifica que las variables `SUPABASE_URL` y `SUPABASE_ANON_KEY` estén configuradas
+- Revisa que la tabla `matches` tenga datos
+- Comprueba los logs en Netlify > Functions
 
-### "Usuario o contraseña incorrectos"
-- Verifica que el usuario existe en `users.json`
-- Ejecuta `npm run hash-passwords` si las contraseñas no están hasheadas
-
-### La scheduled function no se ejecuta
-- Verifica que el sitio está publicado (no en draft)
-- Revisa los logs en Netlify > Functions
-
-## 📄 Licencia
-
-Uso privado / interno.
+### "Supabase connection error"
+- Verifica que el proyecto Supabase esté activo
+- Comprueba que la URL y key sean correctas
+- Revisa las políticas RLS si hay errores de permisos
 
 ---
 
-**Migrado de Google Apps Script a Netlify - Diciembre 2025**
+**Migrado a Supabase - Diciembre 2025**

@@ -1,5 +1,6 @@
 /**
  * Netlify Function: Current Bet
+ * Obtiene la apuesta actual de un jugador
  */
 
 import { supabase } from '../../lib/supabase.js';

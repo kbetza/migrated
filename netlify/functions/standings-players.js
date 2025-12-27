@@ -1,10 +1,9 @@
 /**
  * Netlify Function: Standings Players
- * Devuelve la clasificación de jugadores
+ * Devuelve la clasificación de jugadores desde Supabase
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { getPlayerStandings } from '../../lib/supabase.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -13,17 +12,6 @@ const headers = {
   'Content-Type': 'application/json',
   'Cache-Control': 'public, max-age=60'
 };
-
-function loadPlayerStandings() {
-  try {
-    const filePath = join(process.cwd(), 'public', 'data', 'player-standings.json');
-    const data = readFileSync(filePath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('[standings-players] Error loading standings:', error);
-    return null;
-  }
-}
 
 export async function handler(event, context) {
   // Handle CORS preflight
@@ -41,18 +29,19 @@ export async function handler(event, context) {
   }
 
   try {
-    const standingsData = loadPlayerStandings();
+    // Obtener clasificación desde Supabase
+    const standings = await getPlayerStandings();
 
-    if (!standingsData || !standingsData.standings) {
+    if (!standings || standings.length === 0) {
       return {
-        statusCode: 404,
+        statusCode: 200,
         headers,
-        body: JSON.stringify({ error: 'Standings not available' })
+        body: JSON.stringify([])
       };
     }
 
     // Formatear para compatibilidad con frontend existente
-    const formattedStandings = standingsData.standings.map(player => ({
+    const formattedStandings = standings.map(player => ({
       Posicion: player.position,
       Jugador: player.username,
       'Puntos ganados': player.points,
@@ -71,7 +60,7 @@ export async function handler(event, context) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Server error' })
+      body: JSON.stringify({ error: 'Server error', details: error.message })
     };
   }
 }

@@ -1,10 +1,9 @@
 /**
  * Netlify Function: Standings League
- * Devuelve la clasificación de equipos de La Liga
+ * Devuelve la clasificación de equipos de La Liga desde Supabase
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { getLeagueStandings } from '../../lib/supabase.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -13,17 +12,6 @@ const headers = {
   'Content-Type': 'application/json',
   'Cache-Control': 'public, max-age=300'
 };
-
-function loadLeagueStandings() {
-  try {
-    const filePath = join(process.cwd(), 'public', 'data', 'league-standings.json');
-    const data = readFileSync(filePath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('[standings-league] Error loading standings:', error);
-    return null;
-  }
-}
 
 export async function handler(event, context) {
   // Handle CORS preflight
@@ -41,9 +29,10 @@ export async function handler(event, context) {
   }
 
   try {
-    const standingsData = loadLeagueStandings();
+    // Obtener clasificación desde Supabase
+    const standings = await getLeagueStandings();
 
-    if (!standingsData || !standingsData.standings) {
+    if (!standings || standings.length === 0) {
       return {
         statusCode: 404,
         headers,
@@ -52,7 +41,7 @@ export async function handler(event, context) {
     }
 
     // Formatear para compatibilidad con frontend existente
-    const formattedStandings = standingsData.standings.map(team => ({
+    const formattedStandings = standings.map(team => ({
       Pos: team.position,
       Equipo: team.team.name,
       PJ: team.played,
@@ -77,7 +66,7 @@ export async function handler(event, context) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Server error' })
+      body: JSON.stringify({ error: 'Server error', details: error.message })
     };
   }
 }

@@ -1,10 +1,9 @@
 /**
  * Netlify Function: Matches
- * Devuelve los partidos de la jornada actual con cuotas
+ * Devuelve los partidos de la jornada actual desde Supabase
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
+import { getCurrentMatchdayMatches } from '../../lib/supabase.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -13,17 +12,6 @@ const headers = {
   'Content-Type': 'application/json',
   'Cache-Control': 'public, max-age=60'
 };
-
-function loadCurrentMatchday() {
-  try {
-    const filePath = join(process.cwd(), 'public', 'data', 'current-matchday.json');
-    const data = readFileSync(filePath, 'utf-8');
-    return JSON.parse(data);
-  } catch (error) {
-    console.error('[matches] Error loading current matchday:', error);
-    return null;
-  }
-}
 
 export async function handler(event, context) {
   // Handle CORS preflight
@@ -41,9 +29,10 @@ export async function handler(event, context) {
   }
 
   try {
-    const matchdayData = loadCurrentMatchday();
+    // Obtener partidos de la jornada actual desde Supabase
+    const { matchday, matches } = await getCurrentMatchdayMatches();
 
-    if (!matchdayData || !matchdayData.matches) {
+    if (!matches || matches.length === 0) {
       return {
         statusCode: 404,
         headers,
@@ -52,8 +41,7 @@ export async function handler(event, context) {
     }
 
     // Formatear respuesta para compatibilidad con frontend existente
-    const formattedMatches = matchdayData.matches.map(match => {
-      // Parsear fecha y hora
+    const formattedMatches = matches.map(match => {
       const dateObj = new Date(match.utcDate);
       
       return {
@@ -85,7 +73,7 @@ export async function handler(event, context) {
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Server error' })
+      body: JSON.stringify({ error: 'Server error', details: error.message })
     };
   }
 }

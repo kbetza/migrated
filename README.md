@@ -14,6 +14,25 @@ Sistema de quinielas de La Liga usando Supabase como base de datos.
 - **Base de datos centralizada** - Todos los datos en tablas de Supabase
 - **Sin scheduled functions** - Actualización manual o mediante panel de Supabase
 
+## 📁 Estructura de Imágenes
+
+**IMPORTANTE**: Todas las imágenes (incluyendo logos de equipos) están en la carpeta `/public/imagenes/`:
+
+```
+public/
+├── imagenes/
+│   ├── logo.png           # Logo de la aplicación
+│   ├── loading.gif        # Animación de carga
+│   ├── btn-apuestas.jpg   # Imagen botón apuestas
+│   ├── btn-clasificacion.jpg
+│   ├── ... (otros botones)
+│   ├── 81.png             # Logo FC Barcelona (ID equipo)
+│   ├── 86.png             # Logo Real Madrid (ID equipo)
+│   └── ... (otros logos de equipos)
+```
+
+Los logos de equipos usan el ID del equipo como nombre de archivo (ej: `81.png` para Barcelona).
+
 ## 📦 Configuración
 
 ### 1. Crear proyecto en Supabase
@@ -146,15 +165,27 @@ quiniela-laliga/
 │   ├── check-bet.js
 │   └── current-bet.js
 │
+├── scripts/
+│   ├── move-logos.sh         # Script para mover logos a imagenes
+│   └── ...
+│
 ├── supabase/migrations/      # Scripts SQL
 │   ├── 001_create_matches_table.sql
 │   ├── 002_seed_data.sql
 │   └── 003_create_predictions_tables.sql
 │
-└── public/                   # Frontend (sin cambios)
+└── public/                   # Frontend
     ├── index.html
     ├── lobby.html
-    └── ...
+    ├── js/
+    │   ├── apuestas.js       # Usa /imagenes/ para logos
+    │   ├── clasificacion-liga.js  # Usa imagenes/ para logos
+    │   └── ...
+    ├── styles/
+    └── imagenes/             # TODAS las imágenes aquí (incluye logos de equipos)
+        ├── logo.png
+        ├── 81.png            # Logos de equipos por ID
+        └── ...
 ```
 
 ## ⚠️ Notas importantes
@@ -186,6 +217,10 @@ Si tienes datos en el sistema anterior:
 - Verifica que el proyecto Supabase esté activo
 - Comprueba que la URL y key sean correctas
 - Revisa las políticas RLS si hay errores de permisos
+
+### "Logo no encontrado"
+- Verifica que el archivo `{id_equipo}.png` existe en `/public/imagenes/`
+- Los IDs de equipos deben coincidir con los de football-data.org
 
 ---
 

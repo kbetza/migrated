@@ -3,6 +3,7 @@
  * CLASIFICACION-LIGA.JS
  * ============================================
  * Carga y muestra la clasificación de La Liga
+ * ACTUALIZADO: Logos ahora en carpeta /imagenes/
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -49,7 +50,8 @@ async function loadClasificacionLiga() {
       teamWrapper.className = 'team-wrapper';
       
       const img = document.createElement('img');
-      img.src = `logos/${row["id_equipo"]}.png`;
+      // ACTUALIZADO: Logos ahora en carpeta imagenes
+      img.src = `imagenes/${row["id_equipo"]}.png`;
       img.alt = row["Equipo"];
       img.title = row["Equipo"];
       img.onerror = function() {

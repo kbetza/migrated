@@ -3,7 +3,7 @@
  * APUESTAS.JS - VERSIÓN CORREGIDA
  * ============================================
  * Correcciones:
- * 1. Rutas de logos corregidas (sin 'public/')
+ * 1. Rutas de logos corregidas (ahora en /imagenes/)
  * 2. Manejo correcto de fechas/horas como strings
  */
 
@@ -109,14 +109,14 @@ function formatearHora(hora) {
 
 /**
  * Obtiene la ruta del logo para un equipo
- * CORREGIDO: Sin 'public/' al principio
+ * ACTUALIZADO: Ahora los logos están en /imagenes/
  * @param {number|string} teamId - ID del equipo
  * @returns {string} - Ruta al archivo de logo
  */
 function getLogoPath(teamId) {
   const id = parseInt(teamId, 10);
-  // Ruta correcta desde la carpeta public (donde está el HTML)
-  return `/logos/${id}.png`;
+  // Ruta actualizada: logos ahora en carpeta imagenes
+  return `/imagenes/${id}.png`;
 }
 
 async function loadMatches() {

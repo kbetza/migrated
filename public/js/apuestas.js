@@ -116,7 +116,7 @@ function formatearHora(hora) {
 function getLogoPath(teamId) {
   const id = parseInt(teamId, 10);
   // Ruta correcta desde la carpeta public (donde está el HTML)
-  return `logos/${id}.png`;
+  return `/logos/${id}.png`;
 }
 
 async function loadMatches() {

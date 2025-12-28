@@ -2,6 +2,7 @@
  * ============================================
  * APUESTA-ACTUAL.JS
  * ============================================
+ * ACTUALIZADO: Incluye logos de equipos
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,6 +13,16 @@ document.addEventListener('DOMContentLoaded', () => {
   
   loadApuestaActual();
 });
+
+/**
+ * Obtiene la ruta del logo para un equipo
+ * @param {number|string} teamId - ID del equipo
+ * @returns {string} - Ruta al archivo de logo
+ */
+function getLogoPath(teamId) {
+  const id = parseInt(teamId, 10);
+  return `/imagenes/${id}.png`;
+}
 
 async function loadApuestaActual() {
   const loadingContainer = document.getElementById('loading-container');
@@ -112,14 +123,73 @@ async function loadApuestaActual() {
       const cuotaFormateada = parseFloat(apuesta.odds).toFixed(2).replace('.', ',');
       const resultadoDisplay = tieneResultado ? apuesta.actualResult : '<span class="pendiente">Por jugar</span>';
       
-      tr.innerHTML = `
-        <td>${apuesta.homeTeam || '-'}</td>
-        <td>${apuesta.awayTeam || '-'}</td>
-        <td><span class="pronostico-badge">${apuesta.prediction || '-'}</span></td>
-        <td class="cuota-value">${cuotaFormateada}</td>
-        <td class="resultado-value">${resultadoDisplay}</td>
-        <td>${aciertoIcon}</td>
-      `;
+      // Crear celda LOCAL con logo
+      const tdLocal = document.createElement('td');
+      tdLocal.className = 'team-cell';
+      const localWrapper = document.createElement('div');
+      localWrapper.className = 'team-wrapper-vertical';
+      
+      if (apuesta.homeTeamId) {
+        const imgLocal = document.createElement('img');
+        imgLocal.src = getLogoPath(apuesta.homeTeamId);
+        imgLocal.alt = apuesta.homeTeam || '';
+        imgLocal.className = 'team-logo';
+        imgLocal.onerror = function() { this.style.display = 'none'; };
+        localWrapper.appendChild(imgLocal);
+      }
+      
+      const spanLocal = document.createElement('span');
+      spanLocal.className = 'team-name';
+      spanLocal.textContent = apuesta.homeTeam || '-';
+      localWrapper.appendChild(spanLocal);
+      tdLocal.appendChild(localWrapper);
+      
+      // Crear celda VISITANTE con logo
+      const tdVisitante = document.createElement('td');
+      tdVisitante.className = 'team-cell';
+      const visitanteWrapper = document.createElement('div');
+      visitanteWrapper.className = 'team-wrapper-vertical';
+      
+      if (apuesta.awayTeamId) {
+        const imgVisitante = document.createElement('img');
+        imgVisitante.src = getLogoPath(apuesta.awayTeamId);
+        imgVisitante.alt = apuesta.awayTeam || '';
+        imgVisitante.className = 'team-logo';
+        imgVisitante.onerror = function() { this.style.display = 'none'; };
+        visitanteWrapper.appendChild(imgVisitante);
+      }
+      
+      const spanVisitante = document.createElement('span');
+      spanVisitante.className = 'team-name';
+      spanVisitante.textContent = apuesta.awayTeam || '-';
+      visitanteWrapper.appendChild(spanVisitante);
+      tdVisitante.appendChild(visitanteWrapper);
+      
+      // Construir fila completa
+      tr.appendChild(tdLocal);
+      tr.appendChild(tdVisitante);
+      
+      // Pronóstico
+      const tdPronostico = document.createElement('td');
+      tdPronostico.innerHTML = `<span class="pronostico-badge">${apuesta.prediction || '-'}</span>`;
+      tr.appendChild(tdPronostico);
+      
+      // Cuota
+      const tdCuota = document.createElement('td');
+      tdCuota.className = 'cuota-value';
+      tdCuota.textContent = cuotaFormateada;
+      tr.appendChild(tdCuota);
+      
+      // Resultado
+      const tdResultado = document.createElement('td');
+      tdResultado.className = 'resultado-value';
+      tdResultado.innerHTML = resultadoDisplay;
+      tr.appendChild(tdResultado);
+      
+      // Acierto
+      const tdAcierto = document.createElement('td');
+      tdAcierto.innerHTML = aciertoIcon;
+      tr.appendChild(tdAcierto);
       
       tablaBody.appendChild(tr);
     });

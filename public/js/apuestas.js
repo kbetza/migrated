@@ -114,11 +114,9 @@ function formatearHora(hora) {
  * @returns {string} - Ruta al archivo de logo
  */
 function getLogoPath(teamId) {
-  // const id = parseInt(teamId, 10);
-  const id = teamId;
+  const id = parseInt(teamId, 10);
   // Ruta actualizada: logos ahora en carpeta imagenes
   return `/imagenes/${id}.png`;
-
 }
 
 async function loadMatches() {
@@ -211,17 +209,12 @@ function createMatchRow(partido, index) {
   tdLocal.className = 'team-cell';
   
   const localWrapper = document.createElement('div');
-  localWrapper.style.display = 'flex';
-  localWrapper.style.flexDirection = 'column';
-  localWrapper.style.alignItems = 'center';
-  localWrapper.style.gap = '4px';
+  localWrapper.className = 'team-wrapper-vertical';
   
   const imgLocal = document.createElement('img');
   imgLocal.src = getLogoPath(partido.ID_Local);
   imgLocal.alt = partido.Equipo_Local;
-  imgLocal.style.height = '40px';
-  imgLocal.style.width = '40px';
-  imgLocal.style.objectFit = 'contain';
+  imgLocal.className = 'team-logo';
   imgLocal.onerror = function() { 
     this.style.display = 'none'; 
     console.log(`Logo no encontrado: ${this.src}`);
@@ -241,17 +234,12 @@ function createMatchRow(partido, index) {
   tdVisitante.className = 'team-cell';
   
   const visitanteWrapper = document.createElement('div');
-  visitanteWrapper.style.display = 'flex';
-  visitanteWrapper.style.flexDirection = 'column';
-  visitanteWrapper.style.alignItems = 'center';
-  visitanteWrapper.style.gap = '4px';
+  visitanteWrapper.className = 'team-wrapper-vertical';
   
   const imgVisitante = document.createElement('img');
   imgVisitante.src = getLogoPath(partido.ID_Visitante);
   imgVisitante.alt = partido.Equipo_Visitante;
-  imgVisitante.style.height = '40px';
-  imgVisitante.style.width = '40px';
-  imgVisitante.style.objectFit = 'contain';
+  imgVisitante.className = 'team-logo';
   imgVisitante.onerror = function() { 
     this.style.display = 'none';
     console.log(`Logo no encontrado: ${this.src}`);

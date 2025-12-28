@@ -164,7 +164,7 @@ const LOGO_MAP = {
 function getLogoPath(teamId) {
   const id = parseInt(teamId, 10);
   const logoFile = LOGO_MAP[id] || id;
-  return `logos/${logoFile}.png`;
+  return `public/logos/${logoFile}.png`;
 }
 
 async function loadMatches() {

@@ -1,9 +1,10 @@
 /**
  * Netlify Function: Predictions
  * Guarda apuestas en current_predictions
+ * SIMPLIFICADO: Ya no usa bet_registry, verifica directamente en current_predictions
  */
 
-import { hasPlayerBet, registerBet, addPrediction } from '../../lib/supabase.js';
+import { supabase } from '../../lib/supabase.js';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -36,9 +37,22 @@ export async function handler(event) {
       return { statusCode: 400, headers, body: JSON.stringify({ error: 'Falta jugador o jornada' }) };
     }
 
-    // Verificar si ya apostó
-    const alreadyBet = await hasPlayerBet(jugador, jornadaStr);
-    if (alreadyBet) {
+    const usernameNormalized = jugador.toLowerCase();
+
+    // Verificar si ya existe en current_predictions
+    const { data: existingPredictions, error: checkError } = await supabase
+      .from('current_predictions')
+      .select('id')
+      .eq('username', usernameNormalized)
+      .eq('jornada', jornadaStr)
+      .limit(1);
+
+    if (checkError) {
+      console.error('[predictions] Error checking existing predictions:', checkError);
+      throw new Error('Error verificando apuestas existentes');
+    }
+
+    if (existingPredictions && existingPredictions.length > 0) {
       return {
         statusCode: 409,
         headers,
@@ -46,25 +60,43 @@ export async function handler(event) {
       };
     }
 
-    // Formatear predicción para la nueva estructura
-    const prediction = {
-      username: jugador,
+    // Insertar las predicciones
+    const rows = bets.map(bet => ({
+      username: usernameNormalized,
+      id_partido: parseInt(bet.idpartido, 10),
       jornada: jornadaStr,
-      bets: bets.map(b => ({
-        matchId: parseInt(b.idpartido, 10),
-        homeTeam: b.equipo_Local,
-        awayTeam: b.equipo_Visitante,
-        prediction: b.pronostico,
-        odds: parseFloat(String(b.cuota).replace(',', '.'))
-      }))
+      equipo_local: bet.equipo_Local,
+      equipo_visitante: bet.equipo_Visitante,
+      pronostico: bet.pronostico,
+      cuota: parseFloat(String(bet.cuota).replace(',', '.'))
+    }));
+
+    const { error: insertError } = await supabase
+      .from('current_predictions')
+      .insert(rows);
+
+    if (insertError) {
+      console.error('[predictions] Error inserting predictions:', insertError);
+      
+      // Si es error de duplicado (constraint unique), ya apostó
+      if (insertError.code === '23505') {
+        return {
+          statusCode: 409,
+          headers,
+          body: JSON.stringify({ error: 'Ya has enviado tu apuesta', alreadySubmitted: true })
+        };
+      }
+      
+      throw new Error('Error guardando predicciones: ' + insertError.message);
+    }
+
+    console.log(`[predictions] ✓ ${jugador} apostó en ${jornadaStr} (${rows.length} partidos)`);
+
+    return { 
+      statusCode: 200, 
+      headers, 
+      body: JSON.stringify({ success: true, message: 'Apuesta registrada correctamente' }) 
     };
-
-    await addPrediction(prediction);
-    await registerBet(jugador, jornadaStr);
-
-    console.log(`[predictions] ${jugador} apostó en ${jornadaStr}`);
-
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true, message: 'ok' }) };
 
   } catch (error) {
     console.error('[predictions] Error:', error);

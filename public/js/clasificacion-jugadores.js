@@ -6,7 +6,10 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadClasificacionJugadores();
+  // Esperar un momento para asegurar que auth.js haya cargado
+  setTimeout(() => {
+    loadClasificacionJugadores();
+  }, 100);
 });
 
 /**
@@ -18,11 +21,28 @@ async function loadClasificacionJugadores() {
   const restSection = document.getElementById('rest-section');
   const playersList = document.getElementById('players-list');
   
+  // Verificar que API_URLS existe
+  if (typeof API_URLS === 'undefined' || !API_URLS.clasificacionJugadores) {
+    console.error('API_URLS no está definido');
+    loadingContainer.innerHTML = `
+      <p style="color: #ef5350;">Error: API no disponible.</p>
+      <button class="btn-back" onclick="location.reload()" style="margin-top: 1rem;">Reintentar</button>
+    `;
+    return;
+  }
+  
   try {
+    console.log('Fetching clasificación desde:', API_URLS.clasificacionJugadores);
     const response = await fetch(API_URLS.clasificacionJugadores);
-    const data = await response.json();
     
-    if (!data || data.length === 0) {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Datos recibidos:', data);
+    
+    if (!data || !Array.isArray(data) || data.length === 0) {
       loadingContainer.innerHTML = `
         <p style="color: rgba(255,255,255,0.7);">No hay datos de clasificación disponibles.</p>
         <a href="lobby.html" class="btn-back" style="margin-top: 1rem;">Volver</a>

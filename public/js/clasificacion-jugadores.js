@@ -3,6 +3,7 @@
  * CLASIFICACION-JUGADORES.JS - PREMIUM PODIUM VERSION
  * ============================================
  * Carga y muestra la clasificación con podio destacado
+ * MODIFICADO: En móvil muestra aciertos y jornadas en lugar de "pts"
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -118,6 +119,7 @@ async function loadClasificacionJugadores() {
 
 /**
  * Creates a player row element for players 4th and beyond
+ * MODIFICADO: Añade stats para móvil con aciertos y jornadas
  */
 function createPlayerRow(position, name, points, hits, bets) {
   const row = document.createElement('div');
@@ -133,6 +135,10 @@ function createPlayerRow(position, name, points, hits, bets) {
     <div class="player-points">
       <div class="points-value">${formatPoints(points)}</div>
       <div class="points-label">pts</div>
+    </div>
+    <div class="player-stats-mobile">
+      <div class="stat-line">Aciertos: <span class="stat-number">${hits}</span></div>
+      <div class="stat-line">Jornadas apostadas: <span class="stat-number">${bets}</span></div>
     </div>
   `;
   

@@ -511,6 +511,25 @@
   letter-spacing: 1px;
 }
 
+/* Stats detallados para móvil */
+.player-stats-mobile {
+  display: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.player-stats-mobile .stat-line {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.player-stats-mobile .stat-line .stat-number {
+  font-weight: 700;
+  color: #4CAF50;
+}
+
 /* ============================================
    BACK BUTTON
    ============================================ */
@@ -730,5 +749,14 @@
   
   .player-meta {
     display: none;
+  }
+  
+  /* En móvil, mostrar stats detallados en lugar de "pts" */
+  .player-points {
+    display: none;
+  }
+  
+  .player-stats-mobile {
+    display: flex;
   }
 }

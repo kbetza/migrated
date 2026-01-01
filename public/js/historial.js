@@ -68,7 +68,13 @@ const TEAM_IDS = {
   'CD Leganés': 745,
   'Leganes': 745,
   'Girona FC': 298,
-  'Girona': 298
+  'Girona': 298,
+  'Elche CF': 285,
+  'Elche': 285,
+  'Levante UD': 88,
+  'Levante': 88,
+  'Real Oviedo': 1048,
+  'Oviedo': 1048
 };
 
 /**
